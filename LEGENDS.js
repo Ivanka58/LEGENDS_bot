@@ -10,13 +10,19 @@ const welcomeText = "Добро пожаловать в LEGENDS! Здесь вы
 const autoparkText = "Наш автопарк состоит из ... (описание автопарка)";
 const requirementsText = "Для вступления в LEGENDS необходимо ... (требования)";
 
-// Функция для создания клавиатуры с кнопкой "Назад"
+// Константы для callback_data
+const CALLBACK_START = 'start';
+const CALLBACK_AUTOPARK = 'autopark';
+const CALLBACK_REQUIREMENTS = 'requirements';
+const CALLBACK_BACK = 'back';
+
+// Функция для создания клавиатуры главного меню
 function createMainMenuKeyboard() {
     return {
         reply_markup: {
             inline_keyboard: [
-                [{ text: 'Наш автопарк', callback_data: 'autopark' }],
-                [{ text: 'Что нужно для вступления', callback_data: 'requirements' }],
+                [{ text: 'Наш автопарк', callback_data: CALLBACK_AUTOPARK }],
+                [{ text: 'Что нужно для вступления', callback_data: CALLBACK_REQUIREMENTS }],
             ]
         }
     };
@@ -27,12 +33,31 @@ function createBackButtonKeyboard() {
     return {
         reply_markup: {
             inline_keyboard: [
-                [{ text: 'Назад', callback_data: 'back' }]
+                [{ text: 'Назад', callback_data: CALLBACK_BACK }]
             ]
         }
     };
 }
 
+// Функция для отправки/редактирования сообщения
+function sendMessage(chatId, messageId, text, keyboard) {
+    const options = {
+        chat_id: chatId,
+        parse_mode: 'HTML'
+    };
+    if (messageId) {
+        options.message_id = messageId;
+        options.reply_markup = keyboard.reply_markup;
+        bot.editMessageText(text, options).catch(error => {
+            console.error('Ошибка редактирования сообщения:', error);
+        });
+    } else {
+        bot.sendMessage(chatId, text, keyboard).catch(error => {
+            console.error('Ошибка отправки сообщения:', error);
+        });
+    }
+
+}
 // Обработчик команды /start
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
@@ -40,12 +65,13 @@ bot.onText(/\/start/, (msg) => {
     const keyboard = {
         reply_markup: {
             inline_keyboard: [
-                [{ text: 'Начать', callback_data: 'start' }],
+                [{ text: 'Начать', callback_data: CALLBACK_START }],
             ]
         }
     };
 
-    bot.sendMessage(chatId, 'Приветствуем в LEGENDS!', keyboard);
+    sendMessage(chatId, null,'Приветствуем в LEGENDS!', keyboard);
+
 });
 
 // Обработчик нажатий на кнопки
@@ -54,30 +80,14 @@ bot.on('callback_query', (query) => {
     const data = query.data;
     const messageId = query.message.message_id;
 
-    if (data === 'start') {
-        bot.editMessageText(welcomeText, {
-            chat_id: chatId,
-            message_id: messageId,
-            reply_markup: createMainMenuKeyboard().reply_markup
-        });
-    } else if (data === 'autopark') {
-        bot.editMessageText(autoparkText, {
-            chat_id: chatId,
-            message_id: messageId,
-            reply_markup: createBackButtonKeyboard().reply_markup
-        });
-    } else if (data === 'requirements') {
-        bot.editMessageText(requirementsText, {
-            chat_id: chatId,
-            message_id: messageId,
-            reply_markup: createBackButtonKeyboard().reply_markup
-        });
-    } else if (data === 'back') {
-        bot.editMessageText(welcomeText, {
-            chat_id: chatId,
-            message_id: messageId,
-            reply_markup: createMainMenuKeyboard().reply_markup
-        });
+    if (data === CALLBACK_START) {
+        sendMessage(chatId, messageId, welcomeText, createMainMenuKeyboard());
+    } else if (data === CALLBACK_AUTOPARK) {
+        sendMessage(chatId, messageId, autoparkText, createBackButtonKeyboard());
+    } else if (data === CALLBACK_REQUIREMENTS) {
+        sendMessage(chatId, messageId, requirementsText, createBackButtonKeyboard());
+    } else if (data === CALLBACK_BACK) {
+        sendMessage(chatId, messageId, welcomeText, createMainMenuKeyboard());
     }
 
     // Отправляем уведомление о том, что кнопка обработана
